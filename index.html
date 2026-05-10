@@ -1,1 +1,317 @@
 
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>프랑스어 형용사 구분하기</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Gaegu와 Nanum Pen Script 적용 -->
+    <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Nanum+Pen+Script&display=swap" rel="stylesheet">
+    <style>
+        /* 전체 프로그램에 Gaegu 폰트를 기본으로 설정 */
+        * {
+            font-family: 'Gaegu', cursive;
+        }
+        
+        body {
+            background-color: #fdfcf0; /* 부드러운 크림색 배경 */
+            color: #475569;
+            overflow-x: hidden;
+        }
+
+        .drag-item {
+            cursor: grab;
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            touch-action: none;
+            user-select: none;
+            z-index: 10;
+        }
+
+        .drag-item:active {
+            cursor: grabbing;
+        }
+
+        .drop-basket {
+            transition: all 0.3s ease;
+            min-height: 220px;
+            border: 4px dashed #cbd5e1;
+        }
+
+        .drop-basket.drag-over {
+            background-color: #fef3c7;
+            border-color: #f59e0b;
+            transform: scale(1.02);
+        }
+
+        .correct-pop {
+            animation: pop 0.4s ease-out;
+        }
+
+        @keyframes pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        .word-card {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-12">
+    <div class="max-w-6xl mx-auto p-6">
+        <!-- Header -->
+        <header class="text-center mb-10 mt-6">
+            <h1 class="text-5xl font-bold text-orange-500 mb-4 drop-shadow-sm">프랑스어 형용사 구분하기</h1>
+            <p class="text-2xl text-slate-600">남성, 동일, 여성 형용사를 알맞은 바구니에 담아주세요!</p>
+            
+            <div class="mt-6 inline-flex items-center bg-white px-6 py-2 rounded-full border-2 border-orange-200 shadow-sm">
+                <span class="text-xl mr-3 font-bold">성공:</span>
+                <span id="score" class="text-3xl font-bold text-orange-600">0</span>
+                <span class="text-xl text-slate-400 mx-2">/</span>
+                <span class="text-xl text-slate-500" id="total-count">23</span>
+            </div>
+        </header>
+
+        <!-- Word Bank Area -->
+        <section class="bg-white/80 backdrop-blur-sm p-8 rounded-3xl border-4 border-white shadow-xl mb-10">
+            <h2 class="text-2xl font-bold mb-6 text-indigo-500 flex items-center">
+                <span class="mr-2">🏷️</span> 형용사 목록
+            </h2>
+            <div id="word-bank" class="flex flex-wrap gap-4 justify-center relative min-h-[100px]">
+                <!-- Cards injected by JS -->
+            </div>
+        </section>
+
+        <!-- Baskets Area -->
+        <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="drop-basket bg-blue-50/50 rounded-[2.5rem] p-6 flex flex-col items-center shadow-inner" data-gender="male">
+                <div class="text-2xl font-bold text-blue-600 mb-4 bg-blue-100 px-6 py-2 rounded-full shadow-sm text-center">👦 남성 (Masculin)</div>
+                <div class="flex flex-wrap gap-3 justify-center w-full min-h-[120px] pointer-events-none" id="basket-male"></div>
+            </div>
+
+            <div class="drop-basket bg-yellow-50/50 rounded-[2.5rem] p-6 flex flex-col items-center shadow-inner" data-gender="same">
+                <div class="text-2xl font-bold text-yellow-600 mb-4 bg-yellow-100 px-6 py-2 rounded-full shadow-sm text-center">🤝 동일 (M=F)</div>
+                <div class="flex flex-wrap gap-3 justify-center w-full min-h-[120px] pointer-events-none" id="basket-same"></div>
+            </div>
+
+            <div class="drop-basket bg-pink-50/50 rounded-[2.5rem] p-6 flex flex-col items-center shadow-inner" data-gender="female">
+                <div class="text-2xl font-bold text-pink-600 mb-4 bg-pink-100 px-6 py-2 rounded-full shadow-sm text-center">👧 여성 (Féminin)</div>
+                <div class="flex flex-wrap gap-3 justify-center w-full min-h-[120px] pointer-events-none" id="basket-female"></div>
+            </div>
+        </section>
+
+        <!-- Success Modal -->
+        <div id="result-modal" class="fixed inset-0 bg-orange-100/95 hidden flex items-center justify-center p-4 z-[100]">
+            <div class="bg-white p-10 rounded-[3rem] max-w-md w-full text-center shadow-2xl border-8 border-white">
+                <div class="text-8xl mb-6">🎈</div>
+                <h2 class="text-5xl font-bold text-orange-600 mb-4 tracking-tight">Félicitations !</h2>
+                <p class="text-2xl text-slate-600 mb-8 font-bold">형용사의 성별 구분을<br>완벽하게 마스터했습니다!</p>
+                <div class="flex flex-col gap-3">
+                    <button onclick="location.reload()" class="w-full bg-orange-500 text-white py-4 rounded-2xl text-2xl font-bold hover:bg-orange-600 transition shadow-lg">
+                        한 번 더 해보기
+                    </button>
+                    <button onclick="location.href='../index.html'" class="w-full bg-slate-100 text-slate-600 py-4 rounded-2xl text-2xl font-bold hover:bg-slate-200 transition shadow-md border-2 border-slate-200">
+                        홈으로 돌아가기
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Sound Generator (Web Audio API) ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            if (type === 'correct') {
+                // '딩동댕' 느낌의 높은 알림음
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
+                oscillator.frequency.exponentialRampToValueAtTime(880.00, audioCtx.currentTime + 0.1); // A5
+                gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                oscillator.start();
+                oscillator.stop(audioCtx.currentTime + 0.3);
+            } else {
+                // '땡' 느낌의 낮은 경고음
+                oscillator.type = 'sawtooth';
+                oscillator.frequency.setValueAtTime(150, audioCtx.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.2);
+                gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                oscillator.start();
+                oscillator.stop(audioCtx.currentTime + 0.3);
+            }
+        }
+
+        const wordData = [
+            { word: "grand", gender: "male" }, { word: "grande", gender: "female" },
+            { word: "petit", gender: "male" }, { word: "petite", gender: "female" },
+            { word: "bon", gender: "male" }, { word: "bonne", gender: "female" },
+            { word: "coréen", gender: "male" }, { word: "coréenne", gender: "female" },
+            { word: "canadien", gender: "male" }, { word: "canadienne", gender: "female" },
+            { word: "beau", gender: "male" }, { word: "belle", gender: "female" },
+            { word: "nouveau", gender: "male" }, { word: "nouvelle", gender: "female" },
+            { word: "long", gender: "male" }, { word: "longue", gender: "female" },
+            { word: "gentil", gender: "male" }, { word: "gentille", gender: "female" },
+            { word: "blanc", gender: "male" }, { word: "blanche", gender: "female" },
+            { word: "facile", gender: "same" },
+            { word: "difficile", gender: "same" },
+            { word: "triste", gender: "same" }
+        ];
+
+        let score = 0;
+        const totalWords = wordData.length;
+
+        function init() {
+            document.getElementById('total-count').textContent = totalWords;
+            const bank = document.getElementById('word-bank');
+            const shuffled = [...wordData].sort(() => Math.random() - 0.5);
+
+            shuffled.forEach((item, index) => {
+                const card = document.createElement('div');
+                card.className = "drag-item word-card bg-white px-5 py-3 rounded-2xl border-2 border-slate-100 text-2xl text-slate-700 font-bold";
+                card.textContent = item.word;
+                card.draggable = true;
+                card.id = `card-${index}`;
+                card.dataset.gender = item.gender;
+                
+                // Desktop Drag & Drop
+                card.addEventListener('dragstart', (e) => {
+                    e.dataTransfer.setData('text/plain', card.id);
+                    card.style.opacity = '0.4';
+                });
+                card.addEventListener('dragend', () => card.style.opacity = '1');
+
+                // Tablet/Mobile Touch
+                card.addEventListener('touchstart', handleTouchStart, {passive: false});
+                card.addEventListener('touchmove', handleTouchMove, {passive: false});
+                card.addEventListener('touchend', handleTouchEnd);
+
+                bank.appendChild(card);
+            });
+
+            document.querySelectorAll('.drop-basket').forEach(basket => {
+                basket.addEventListener('dragover', e => {
+                    e.preventDefault();
+                    basket.classList.add('drag-over');
+                });
+                basket.addEventListener('dragleave', () => basket.classList.remove('drag-over'));
+                basket.addEventListener('drop', e => {
+                    e.preventDefault();
+                    basket.classList.remove('drag-over');
+                    const cardId = e.dataTransfer.getData('text/plain');
+                    checkAnswer(cardId, basket);
+                });
+            });
+        }
+
+        function checkAnswer(cardId, basket) {
+            const card = document.getElementById(cardId);
+            if (!card) return;
+
+            const correctGender = card.dataset.gender;
+            const basketGender = basket.dataset.gender;
+
+            if (correctGender === basketGender) {
+                playSound('correct');
+                card.remove();
+                const resultTag = document.createElement('div');
+                resultTag.className = "correct-pop bg-white px-4 py-2 rounded-xl border-2 border-green-200 text-xl font-bold text-green-600 shadow-sm pointer-events-none";
+                resultTag.textContent = card.textContent;
+                
+                // 해당 바구니의 목록 컨테이너에 추가
+                basket.querySelector('div:last-child').appendChild(resultTag);
+                
+                score++;
+                document.getElementById('score').textContent = score;
+                if (score === totalWords) {
+                    setTimeout(() => document.getElementById('result-modal').classList.remove('hidden'), 500);
+                }
+            } else {
+                playSound('wrong');
+                basket.classList.add('bg-red-50', 'border-red-300');
+                setTimeout(() => basket.classList.remove('bg-red-50', 'border-red-300'), 400);
+            }
+        }
+
+        // --- Touch Logic Improvement ---
+        let touchTarget = null;
+        let offset = { x: 0, y: 0 };
+
+        function handleTouchStart(e) {
+            touchTarget = e.currentTarget;
+            
+            // 터치 지점과 카드의 왼쪽 상단 모서리 간의 거리를 계산하여 카드가 손가락 아래에 오도록 함
+            const rect = touchTarget.getBoundingClientRect();
+            offset.x = e.touches[0].clientX - rect.left;
+            offset.y = e.touches[0].clientY - rect.top;
+            
+            touchTarget.style.position = 'fixed';
+            touchTarget.style.width = rect.width + 'px'; // 크기 고정
+            touchTarget.style.height = rect.height + 'px';
+            touchTarget.style.zIndex = '1000';
+            touchTarget.style.pointerEvents = 'none'; // 바구니 인식을 위해 일시적으로 이벤트 차단
+            
+            moveAt(e.touches[0].clientX, e.touches[0].clientY);
+        }
+
+        function handleTouchMove(e) {
+            if (!touchTarget) return;
+            e.preventDefault();
+            moveAt(e.touches[0].clientX, e.touches[0].clientY);
+            
+            // 드래그 중인 위치의 바구니 시각적 효과
+            const dropTarget = document.elementFromPoint(e.touches[0].clientX, e.touches[0].clientY);
+            const basket = dropTarget?.closest('.drop-basket');
+            
+            document.querySelectorAll('.drop-basket').forEach(b => b.classList.remove('drag-over'));
+            if (basket) basket.classList.add('drag-over');
+        }
+
+        function moveAt(clientX, clientY) {
+            if (!touchTarget) return;
+            // 계산된 오프셋을 사용하여 카드를 정확히 손가락 아래로 이동
+            touchTarget.style.left = clientX - offset.x + 'px';
+            touchTarget.style.top = clientY - offset.y + 'px';
+        }
+
+        function handleTouchEnd(e) {
+            if (!touchTarget) return;
+            const touch = e.changedTouches[0];
+            
+            // 드롭 위치 확인
+            const dropTarget = document.elementFromPoint(touch.clientX, touch.clientY);
+            const basket = dropTarget?.closest('.drop-basket');
+
+            // 스타일 원상복구
+            touchTarget.style.position = '';
+            touchTarget.style.left = '';
+            touchTarget.style.top = '';
+            touchTarget.style.width = '';
+            touchTarget.style.height = '';
+            touchTarget.style.zIndex = '';
+            touchTarget.style.pointerEvents = 'auto';
+            document.querySelectorAll('.drop-basket').forEach(b => b.classList.remove('drag-over'));
+
+            if (basket) {
+                checkAnswer(touchTarget.id, basket);
+            }
+            
+            touchTarget = null;
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
